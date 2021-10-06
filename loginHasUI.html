@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script type="module">
+        import requestLogin from "./requestLogin.js";
+        import {
+            loadedType,
+            messageType,
+            createMessage,
+            isMessage,
+            isLoaded,
+            getMessageData
+        } from "./message.js";
+
+        const opener = window.opener;
+        if (!opener) { // 没有打开者，直接打开则直接关闭
+            window.close();
+        }
+
+        const login = (rawData) => requestLogin(rawData)
+            .then(token => {
+                // 保存登录信息
+                localStorage.setItem("username", rawData.username);
+                localStorage.setItem("user_token", token);
+                // 返回 token
+                opener.postMessage(createMessage(messageType, { done: true, token }), "*");
+                window.close();
+            })
+            .catch(()=> {
+            });
+        window.login = login;
+    </script>
+</body>
+
+</html>

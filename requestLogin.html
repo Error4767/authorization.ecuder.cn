@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script type="module">
+        import requestLogin from "./requestLogin.js";
+        import {
+            loadedType,
+            messageType,
+            createMessage,
+            isMessage,
+            isLoaded,
+            getMessageData
+        } from "./message.js";
+
+        import networkPath from "./networkPath.js";
+
+        const opener = window.parent;
+        if (!opener) { // 没有打开者，直接打开则直接关闭
+            window.close();
+        }
+        // 发送页面加载完毕信息
+        opener.postMessage(createMessage(loadedType), "*");
+        // 接收到信息
+        window.addEventListener("message", (event) => {
+            const data = event.data;
+            if (isMessage(data)) {
+                const rawData = getMessageData(data);
+                // 发起登录请求并且返回响应值
+                requestLogin(rawData)
+                    .then(token => {
+                        // 保存登录信息
+                        localStorage.setItem("username", rawData.username);
+                        localStorage.setItem("user_token", token);
+                        // 返回 token
+                        opener.postMessage(createMessage(messageType, { done: true, token }), "*");
+                    })
+                    .catch(err => opener.postMessage(createMessage(messageType, { done: false, error: err }), "*"));
+            }
+        })
+    </script>
+</body>
+
+</html>

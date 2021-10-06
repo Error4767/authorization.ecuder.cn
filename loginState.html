@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script type="module">
+        import {
+            loadedType,
+            messageType,
+            createMessage,
+            isMessage,
+            isLoaded,
+            getMessageData
+        } from "./message.js";
+
+        import networkPath from "./networkPath.js";
+
+        import fetch from "./fetch.js";
+
+        import clearLoginState from "./clearLoginState.js";
+
+        const opener = window.parent;
+        if (!opener) { // 没有打开者，直接打开则直接关闭
+            window.close();
+        }
+        // 发送页面加载完毕信息
+        opener.postMessage(createMessage(loadedType), "*");
+
+        // 接收到信息就回应状态信息
+        window.addEventListener("message", (event) => {
+            // 如果不是允许的域，直接结束，不允许获取登录信息
+            if(!networkPath.isAllow(event.origin)) {
+                return;
+            }
+            const data = event.data;
+            if (isMessage(data)) {
+                const user_token = localStorage.getItem("user_token");
+                const username = localStorage.getItem("username");
+                if (user_token && user_token.length > 0) { // 有 token，检测其有效性
+                    fetch(networkPath.authVerifyServerPath + "verifyLoginState", {
+                        method: 'post',
+                        headers: {
+                            token: user_token
+                        }
+                    })
+                        .then(r => r.text())
+                        .then(r => {
+                            if (Boolean(r)) {
+                                opener.postMessage(createMessage(messageType, { username, user_token }), "*");
+                            } else {
+                                clearLoginState();
+                                opener.postMessage(createMessage(messageType, ""), "*");
+                            }
+                        })
+                        .catch(() => {
+                            clearLoginState();
+                            opener.postMessage(createMessage(messageType, ""), "*");
+                        })
+                } else {
+                    // 没有 token 或 token 无效，返回空数据
+                    opener.postMessage(createMessage(messageType, ""), "*");
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>
